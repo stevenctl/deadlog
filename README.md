@@ -1,5 +1,7 @@
 # deadlog
 
+![Build Badge](https://github.com/stevenctl/deadlog/actions/workflows/go.yml/badge.svg)
+
 A Go library for debugging mutex deadlocks with logged wrappers and analysis tools.
 
 ## Installation
