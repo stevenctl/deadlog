@@ -37,11 +37,12 @@ func (m *Mutex) emit(typ, state string, id int) {
 }
 
 // Lock acquires the write lock.
+// Uses type "WLOCK" which does not track RELEASED (use LockFunc for that).
 func (m *Mutex) Lock() {
 	id := rand.IntN(9999999)
-	m.emit("LOCK", "START", id)
+	m.emit("WLOCK", "START", id)
 	m.mu.Lock()
-	m.emit("LOCK", "ACQUIRED", id)
+	m.emit("WLOCK", "ACQUIRED", id)
 }
 
 // Unlock releases the write lock.
@@ -51,6 +52,7 @@ func (m *Mutex) Unlock() {
 
 // LockFunc acquires the write lock and returns an unlock function
 // that logs the RELEASED event with a correlated ID.
+// Uses type "LOCK" which tracks the full lifecycle.
 func (m *Mutex) LockFunc() func() {
 	id := rand.IntN(9999999)
 	m.emit("LOCK", "START", id)
@@ -63,11 +65,12 @@ func (m *Mutex) LockFunc() func() {
 }
 
 // RLock acquires the read lock.
+// Uses type "RWLOCK" which does not track RELEASED (use RLockFunc for that).
 func (m *Mutex) RLock() {
 	id := rand.IntN(9999999)
-	m.emit("RLOCK", "START", id)
+	m.emit("RWLOCK", "START", id)
 	m.mu.RLock()
-	m.emit("RLOCK", "ACQUIRED", id)
+	m.emit("RWLOCK", "ACQUIRED", id)
 }
 
 // RUnlock releases the read lock.
@@ -77,6 +80,7 @@ func (m *Mutex) RUnlock() {
 
 // RLockFunc acquires the read lock and returns an unlock function
 // that logs the RELEASED event with a correlated ID.
+// Uses type "RLOCK" which tracks the full lifecycle.
 func (m *Mutex) RLockFunc() func() {
 	id := rand.IntN(9999999)
 	m.emit("RLOCK", "START", id)

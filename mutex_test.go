@@ -33,11 +33,12 @@ func TestMutex_BasicLockUnlock(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
-	if events[0].State != "START" || events[0].Type != "LOCK" {
-		t.Errorf("first event should be LOCK START, got %s %s", events[0].Type, events[0].State)
+	// Lock() uses WLOCK (untracked) type
+	if events[0].State != "START" || events[0].Type != "WLOCK" {
+		t.Errorf("first event should be WLOCK START, got %s %s", events[0].Type, events[0].State)
 	}
-	if events[1].State != "ACQUIRED" || events[1].Type != "LOCK" {
-		t.Errorf("second event should be LOCK ACQUIRED, got %s %s", events[1].Type, events[1].State)
+	if events[1].State != "ACQUIRED" || events[1].Type != "WLOCK" {
+		t.Errorf("second event should be WLOCK ACQUIRED, got %s %s", events[1].Type, events[1].State)
 	}
 	if events[0].ID != events[1].ID {
 		t.Errorf("correlation IDs should match: %d vs %d", events[0].ID, events[1].ID)
@@ -75,11 +76,12 @@ func TestMutex_RLock(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
-	if events[0].Type != "RLOCK" || events[0].State != "START" {
-		t.Errorf("first event should be RLOCK START")
+	// RLock() uses RWLOCK (untracked) type
+	if events[0].Type != "RWLOCK" || events[0].State != "START" {
+		t.Errorf("first event should be RWLOCK START, got %s %s", events[0].Type, events[0].State)
 	}
-	if events[1].Type != "RLOCK" || events[1].State != "ACQUIRED" {
-		t.Errorf("second event should be RLOCK ACQUIRED")
+	if events[1].Type != "RWLOCK" || events[1].State != "ACQUIRED" {
+		t.Errorf("second event should be RWLOCK ACQUIRED, got %s %s", events[1].Type, events[1].State)
 	}
 }
 

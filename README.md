@@ -107,8 +107,8 @@ Example output:
 ===============================================
 
 === STUCK: Started but never acquired (waiting for lock) ===
-  LOCK  | worker-pool          | ID: 7339384
-  RLOCK | cache                | ID: 6593621
+  WLOCK | worker-pool          | ID: 7339384
+  RWLOCK | cache               | ID: 6593621
 
 === HELD: Acquired but never released (holding lock) ===
   RLOCK | database             | ID: 5377378
@@ -147,12 +147,25 @@ Events are logged as JSON:
 ```
 
 Fields:
-- `type`: `LOCK` (write) or `RLOCK` (read)
+- `type`: lock type (see below)
 - `state`: `START`, `ACQUIRED`, or `RELEASED`
 - `name`: mutex name from `WithName()`
 - `id`: correlation ID (random, same for START/ACQUIRED/RELEASED of one lock operation)
 - `ts`: unix nanoseconds
 - `trace`: stack trace (if enabled with `WithTrace()`)
+
+### Lock Types
+
+| Method | Type | Tracked | Description |
+|--------|------|---------|-------------|
+| `LockFunc()` | `LOCK` | Yes | Write lock with RELEASED tracking |
+| `RLockFunc()` | `RLOCK` | Yes | Read lock with RELEASED tracking |
+| `Lock()` | `WLOCK` | No | Write lock, no RELEASED event |
+| `RLock()` | `RWLOCK` | No | Read lock, no RELEASED event |
+
+**Tracked** types (`LOCK`, `RLOCK`) emit RELEASED events via the unlock function, so the analyzer can detect held locks. **Untracked** types (`WLOCK`, `RWLOCK`) are drop-in compatible with `sync.Mutex`/`sync.RWMutex` but won't be reported as "held" since there's no RELEASED event to correlate.
+
+Use untracked methods (`Lock()`/`RLock()`) initially to detect contention, then switch to tracked methods (`LockFunc()`/`RLockFunc()`) where you need to identify which locks are being held.
 
 ## How It Works
 
@@ -161,8 +174,8 @@ Fields:
 3. **RELEASED**: Logged when the unlock function is called (only with `LockFunc()`/`RLockFunc()`)
 
 The analyzer detects:
-- **Stuck**: START without ACQUIRED (goroutine waiting for a lock)
-- **Held**: ACQUIRED without RELEASED (lock not released, possible deadlock cause)
+- **Stuck**: START without ACQUIRED (goroutine waiting for a lock) - all types
+- **Held**: ACQUIRED without RELEASED (lock not released) - tracked types only (`LOCK`, `RLOCK`)
 
 ## License
 

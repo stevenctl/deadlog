@@ -14,10 +14,15 @@ import (
 
 // LockInfo contains information about a lock event.
 type LockInfo struct {
-	Type  string // "LOCK" or "RLOCK"
+	Type  string // "LOCK", "RLOCK" (tracked), "WLOCK", "RWLOCK" (untracked)
 	Name  string // mutex name
 	ID    int    // correlation ID
 	Trace string // stack trace if available
+}
+
+// isTrackedType returns true if the lock type tracks RELEASED events.
+func isTrackedType(typ string) bool {
+	return typ == "LOCK" || typ == "RLOCK"
 }
 
 // Result contains the analysis results.
@@ -82,8 +87,11 @@ func Analyze(r io.Reader) (*Result, error) {
 		}
 	}
 
-	// Find held: acquired but never released
+	// Find held: acquired but never released (only for tracked types)
 	for key, info := range acquires {
+		if !isTrackedType(info.Type) {
+			continue // WLOCK/RWLOCK don't track RELEASED, skip them
+		}
 		if _, released := releases[key]; !released {
 			result.Held = append(result.Held, *info)
 		}
