@@ -1,6 +1,9 @@
 # deadlog
 
 ![Build Badge](https://github.com/stevenctl/deadlog/actions/workflows/go.yml/badge.svg)
+![Go Version](https://img.shields.io/badge/go-1.25-blue)
+![License](https://img.shields.io/github/license/stevenctl/deadlog)
+![Go Report Card](https://goreportcard.com/badge/github.com/stevenctl/deadlog)
 
 A Go library for debugging mutex deadlocks with logged wrappers and analysis tools.
 
