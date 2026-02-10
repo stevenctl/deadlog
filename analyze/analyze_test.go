@@ -421,6 +421,79 @@ func TestAnalyze_MixedTrackedUntracked(t *testing.T) {
 	untracked2.RUnlock()
 }
 
+func updateHealth(mu *deadlog.Mutex) func() {
+	return mu.LockFunc(deadlog.WithLockName("update-health"))
+}
+
+func addItem(mu *deadlog.Mutex) func() {
+	return mu.LockFunc(deadlog.WithLockName("add-item"))
+}
+
+func applyDamage(mu *deadlog.Mutex) func() {
+	return mu.LockFunc(deadlog.WithLockName("apply-damage"))
+}
+
+func TestShowcase_NamedCallsitesWithTrace(t *testing.T) {
+	var buf bytes.Buffer
+	var bufMu sync.Mutex
+
+	safeLogger := func(e deadlog.Event) {
+		bufMu.Lock()
+		defer bufMu.Unlock()
+		deadlog.WriterLogger(&buf)(e)
+	}
+
+	playerState := deadlog.New(
+		deadlog.WithName("player-state"),
+		deadlog.WithTrace(1),
+		deadlog.WithLogger(safeLogger),
+	)
+
+	inventory := deadlog.New(
+		deadlog.WithName("inventory"),
+		deadlog.WithTrace(1),
+		deadlog.WithLogger(safeLogger),
+	)
+
+	// updateHealth holds player-state, never releases
+	_ = updateHealth(&playerState)
+
+	// addItem holds inventory, never releases
+	_ = addItem(&inventory)
+
+	// applyDamage tries to acquire player-state, gets stuck
+	started := make(chan struct{})
+	go func() {
+		close(started)
+		applyDamage(&playerState)
+	}()
+	<-started
+	time.Sleep(50 * time.Millisecond)
+
+	// Print raw JSON events
+	bufMu.Lock()
+	snapshot := buf.Bytes()
+	bufMu.Unlock()
+	t.Log("=== Raw JSON Events ===")
+	for _, line := range strings.Split(strings.TrimSpace(string(snapshot)), "\n") {
+		t.Log(line)
+	}
+
+	// Analyze and print report
+	result, err := Analyze(bytes.NewReader(snapshot))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var report bytes.Buffer
+	PrintReport(&report, result)
+	t.Log("\n" + report.String())
+
+	// cleanup
+	playerState.Unlock()
+	inventory.Unlock()
+}
+
 func TestAnalyze_CountsByType(t *testing.T) {
 	// Test with raw JSON to precisely control event types
 	input := `{"type":"LOCK","state":"START","name":"a","id":1,"ts":1}
