@@ -25,7 +25,7 @@ func New(opts ...Option) *Mutex {
 	return m
 }
 
-func (m *Mutex) emit(typ, state string, id int) {
+func (m *Mutex) emit(typ, state string, id int, name string) {
 	if m.logFunc == nil {
 		return
 	}
@@ -33,16 +33,16 @@ func (m *Mutex) emit(typ, state string, id int) {
 	if m.traceDepth > 0 {
 		trace = getCallerChain(4, m.traceDepth)
 	}
-	m.logFunc(newEvent(typ, state, m.name, id, trace))
+	m.logFunc(newEvent(typ, state, name, id, trace))
 }
 
 // Lock acquires the write lock.
 // Uses type "WLOCK" which does not track RELEASED (use LockFunc for that).
 func (m *Mutex) Lock() {
 	id := rand.IntN(9999999)
-	m.emit("WLOCK", "START", id)
+	m.emit("WLOCK", "START", id, m.name)
 	m.mu.Lock()
-	m.emit("WLOCK", "ACQUIRED", id)
+	m.emit("WLOCK", "ACQUIRED", id, m.name)
 }
 
 // Unlock releases the write lock.
@@ -53,13 +53,18 @@ func (m *Mutex) Unlock() {
 // LockFunc acquires the write lock and returns an unlock function
 // that logs the RELEASED event with a correlated ID.
 // Uses type "LOCK" which tracks the full lifecycle.
-func (m *Mutex) LockFunc() func() {
+// Optional LockOpt arguments override per-call settings (e.g. WithLockName).
+func (m *Mutex) LockFunc(opts ...LockOpt) func() {
+	lo := lockOpts{name: m.name}
+	for _, opt := range opts {
+		opt(&lo)
+	}
 	id := rand.IntN(9999999)
-	m.emit("LOCK", "START", id)
+	m.emit("LOCK", "START", id, lo.name)
 	m.mu.Lock()
-	m.emit("LOCK", "ACQUIRED", id)
+	m.emit("LOCK", "ACQUIRED", id, lo.name)
 	return func() {
-		m.emit("LOCK", "RELEASED", id)
+		m.emit("LOCK", "RELEASED", id, lo.name)
 		m.mu.Unlock()
 	}
 }
@@ -68,9 +73,9 @@ func (m *Mutex) LockFunc() func() {
 // Uses type "RWLOCK" which does not track RELEASED (use RLockFunc for that).
 func (m *Mutex) RLock() {
 	id := rand.IntN(9999999)
-	m.emit("RWLOCK", "START", id)
+	m.emit("RWLOCK", "START", id, m.name)
 	m.mu.RLock()
-	m.emit("RWLOCK", "ACQUIRED", id)
+	m.emit("RWLOCK", "ACQUIRED", id, m.name)
 }
 
 // RUnlock releases the read lock.
@@ -81,13 +86,18 @@ func (m *Mutex) RUnlock() {
 // RLockFunc acquires the read lock and returns an unlock function
 // that logs the RELEASED event with a correlated ID.
 // Uses type "RLOCK" which tracks the full lifecycle.
-func (m *Mutex) RLockFunc() func() {
+// Optional LockOpt arguments override per-call settings (e.g. WithLockName).
+func (m *Mutex) RLockFunc(opts ...LockOpt) func() {
+	lo := lockOpts{name: m.name}
+	for _, opt := range opts {
+		opt(&lo)
+	}
 	id := rand.IntN(9999999)
-	m.emit("RLOCK", "START", id)
+	m.emit("RLOCK", "START", id, lo.name)
 	m.mu.RLock()
-	m.emit("RLOCK", "ACQUIRED", id)
+	m.emit("RLOCK", "ACQUIRED", id, lo.name)
 	return func() {
-		m.emit("RLOCK", "RELEASED", id)
+		m.emit("RLOCK", "RELEASED", id, lo.name)
 		m.mu.RUnlock()
 	}
 }

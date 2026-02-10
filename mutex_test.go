@@ -135,6 +135,57 @@ func TestMutex_WithTrace(t *testing.T) {
 	}
 }
 
+func TestMutex_LockFunc_WithLockName(t *testing.T) {
+	var buf bytes.Buffer
+	m := New(WithName("base"), WithLogger(WriterLogger(&buf)))
+
+	unlock := m.LockFunc(WithLockName("custom-write"))
+	unlock()
+
+	events := collectEvents(&buf)
+	if len(events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(events))
+	}
+	for _, e := range events {
+		if e.Name != "custom-write" {
+			t.Errorf("expected name 'custom-write', got %q", e.Name)
+		}
+	}
+}
+
+func TestMutex_RLockFunc_WithLockName(t *testing.T) {
+	var buf bytes.Buffer
+	m := New(WithName("base"), WithLogger(WriterLogger(&buf)))
+
+	unlock := m.RLockFunc(WithLockName("custom-read"))
+	unlock()
+
+	events := collectEvents(&buf)
+	if len(events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(events))
+	}
+	for _, e := range events {
+		if e.Name != "custom-read" {
+			t.Errorf("expected name 'custom-read', got %q", e.Name)
+		}
+	}
+}
+
+func TestMutex_LockFunc_NoOpts_UsesMutexName(t *testing.T) {
+	var buf bytes.Buffer
+	m := New(WithName("mutex-level"), WithLogger(WriterLogger(&buf)))
+
+	unlock := m.LockFunc()
+	unlock()
+
+	events := collectEvents(&buf)
+	for _, e := range events {
+		if e.Name != "mutex-level" {
+			t.Errorf("expected name 'mutex-level', got %q", e.Name)
+		}
+	}
+}
+
 func TestMutex_ConcurrentReaders(t *testing.T) {
 	m := New(WithLogger(nil)) // disable logging for this test
 

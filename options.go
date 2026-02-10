@@ -25,3 +25,19 @@ func WithTrace(depth int) Option {
 		m.traceDepth = depth
 	}
 }
+
+// lockOpts holds per-call options for LockFunc/RLockFunc.
+type lockOpts struct {
+	name string
+}
+
+// LockOpt configures a single LockFunc or RLockFunc call.
+type LockOpt func(*lockOpts)
+
+// WithLockName sets a name for this specific lock operation,
+// overriding the mutex-level name for the emitted events.
+func WithLockName(name string) LockOpt {
+	return func(o *lockOpts) {
+		o.name = name
+	}
+}
