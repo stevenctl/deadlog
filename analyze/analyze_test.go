@@ -456,16 +456,16 @@ func TestShowcase_NamedCallsitesWithTrace(t *testing.T) {
 	)
 
 	// updateHealth holds player-state, never releases
-	_ = updateHealth(&playerState)
+	_ = updateHealth(playerState)
 
 	// addItem holds inventory, never releases
-	_ = addItem(&inventory)
+	_ = addItem(inventory)
 
 	// applyDamage tries to acquire player-state, gets stuck
 	started := make(chan struct{})
 	go func() {
 		close(started)
-		applyDamage(&playerState)
+		applyDamage(playerState)
 	}()
 	<-started
 	time.Sleep(50 * time.Millisecond)

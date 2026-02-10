@@ -15,12 +15,12 @@ type Mutex struct {
 }
 
 // New creates a new logged Mutex with the given options.
-func New(opts ...Option) Mutex {
-	m := Mutex{
+func New(opts ...Option) *Mutex {
+	m := &Mutex{
 		logFunc: DefaultLogger,
 	}
 	for _, opt := range opts {
-		opt(&m)
+		opt(m)
 	}
 	return m
 }
